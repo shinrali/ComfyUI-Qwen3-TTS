@@ -47,6 +47,14 @@ packages instead of installing a second GPU stack. The nodes still execute
 synchronously inside ComfyUI's normal prompt queue, while ComfyUI's own Python
 packages remain unchanged.
 
+After installing the isolated runtime, `install.py` automatically downloads
+both official models into `ComfyUI/models/qwen-voice/`. New downloads use a
+portable direct-file layout and therefore do not require Windows symlink
+privileges. Existing complete Hugging Face caches are detected and reused, so
+upgrading an existing N5, Spark, or Windows installation does not download a
+second copy. Set `QWEN3_TTS_SKIP_MODEL_DOWNLOAD=1` to install dependencies only,
+or `QWEN3_TTS_MODEL_ROOT` to override the model directory.
+
 While a prompt is running, the nodes publish standard ComfyUI progress events
 for queueing, model loading, reference preparation, generation, validation, and
 output saving. Generation advances from 35% to 92% using a conservative runtime
@@ -55,10 +63,12 @@ from Qwen3-TTS.
 
 ## Models
 
-Download both official model repositories into a Hugging Face cache rooted at:
+`install.py` downloads both official model repositories automatically. New
+installations use:
 
 ```text
-ComfyUI/models/qwen-voice/huggingface/
+ComfyUI/models/qwen-voice/Qwen3-TTS-12Hz-1.7B-VoiceDesign/
+ComfyUI/models/qwen-voice/Qwen3-TTS-12Hz-1.7B-Base/
 ```
 
 Required models:
@@ -68,7 +78,8 @@ Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign
 Qwen/Qwen3-TTS-12Hz-1.7B-Base
 ```
 
-The resulting layout includes:
+Existing installations using the following Hugging Face cache layout remain
+fully supported and are reused without another download:
 
 ```text
 ComfyUI/models/qwen-voice/huggingface/hub/models--Qwen--Qwen3-TTS-12Hz-1.7B-VoiceDesign/

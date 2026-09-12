@@ -88,6 +88,21 @@ def main() -> None:
     subprocess.check_call([*pip, "--no-deps", "qwen-tts==0.1.1"])
     subprocess.check_call([*pip, "-r", str(ROOT / "requirements-runtime.txt")])
 
+    if os.environ.get("QWEN3_TTS_SKIP_MODEL_DOWNLOAD", "").lower() in {"1", "true", "yes"}:
+        print("Skipping Qwen3-TTS model download by request.", flush=True)
+        return
+
+    default_model_root = ROOT.parent.parent / "models" / "qwen-voice"
+    model_root = Path(
+        os.environ.get("QWEN3_TTS_MODEL_ROOT", str(default_model_root))
+    ).expanduser().resolve()
+    subprocess.check_call([
+        python,
+        str(ROOT / "download_models.py"),
+        "--model-root",
+        str(model_root),
+    ])
+
 
 if __name__ == "__main__":
     main()

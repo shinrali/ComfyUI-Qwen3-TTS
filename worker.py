@@ -14,6 +14,7 @@ import soundfile as sf
 import torch
 from qwen_tts import Qwen3TTSModel
 
+from model_paths import MODEL_IDS, resolve_model_dir
 from quality import speech_token_limit, validate_speech
 
 
@@ -29,19 +30,13 @@ def write_status(path: Path, stage: str) -> None:
 
 
 def load_model(kind: str, cache_dir: Path) -> Any:
-    model_id = (
-        "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
-        if kind == "design"
-        else "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
-    )
-    repo_dir = cache_dir / "hub" / f"models--{model_id.replace('/', '--')}"
-    ref = repo_dir / "refs" / "main"
-    if not ref.is_file():
-        raise FileNotFoundError(f"Qwen3-TTS model ref was not found: {ref}")
-    model_dir = repo_dir / "snapshots" / ref.read_text(encoding="utf-8").strip()
-    required = (model_dir / "config.json", model_dir / "model.safetensors")
-    if not model_dir.is_dir() or any(not path.is_file() for path in required):
-        raise FileNotFoundError(f"Qwen3-TTS model snapshot is incomplete: {model_dir}")
+    model_id = MODEL_IDS[kind]
+    model_root = cache_dir.parent
+    model_dir = resolve_model_dir(model_root, model_id)
+    if model_dir is None:
+        raise FileNotFoundError(
+            f"Qwen3-TTS model is missing or incomplete under: {model_root} ({model_id})"
+        )
     return Qwen3TTSModel.from_pretrained(
         str(model_dir),
         device_map="cuda:0",
