@@ -11,11 +11,16 @@ import subprocess
 import sys
 import sysconfig
 
-from runtime_paths import runtime_python
-
-
 ROOT = Path(__file__).resolve().parent
 VENV = ROOT / ".venv"
+
+# Windows portable/embeddable Python can run with an isolated ``python*._pth``
+# configuration that does not add the script directory to ``sys.path``.  Make
+# local custom-node modules importable before importing them.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from runtime_paths import runtime_python
 
 
 def shared_site_packages() -> Path:
