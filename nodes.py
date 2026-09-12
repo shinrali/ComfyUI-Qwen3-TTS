@@ -15,6 +15,7 @@ from typing import Any
 import folder_paths
 
 from .progress import estimate_generation_seconds, stage_percent
+from .runtime_paths import runtime_python
 
 
 LANGUAGES = [
@@ -26,7 +27,7 @@ ROOT = Path(__file__).resolve().parent
 
 
 def _run(request: dict[str, Any]) -> dict[str, Any]:
-    python = ROOT / ".venv" / "bin" / "python"
+    python = runtime_python(ROOT / ".venv")
     if not python.is_file():
         raise RuntimeError(f"Qwen3-TTS runtime is not installed. Run: python {ROOT / 'install.py'}")
     model_cache = Path(folder_paths.models_dir).resolve() / "qwen-voice" / "huggingface"

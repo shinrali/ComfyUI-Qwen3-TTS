@@ -26,6 +26,18 @@ git clone https://github.com/shinrali/ComfyUI-Qwen3-TTS.git
 python ComfyUI-Qwen3-TTS/install.py
 ```
 
+On Windows Portable, run the installer with ComfyUI's embedded Python:
+
+```bat
+..\python_embeded\python.exe ComfyUI-Qwen3-TTS\install.py
+```
+
+Run that command from the `ComfyUI\custom_nodes` directory. The installer uses
+`.venv\Scripts\python.exe` on Windows and `.venv/bin/python` on Linux/macOS.
+If the embedded Windows Python cannot create a standard venv, the installer can
+fall back to an existing `uv` executable. A `.venv` copied from another OS or
+CPU architecture must not be reused; run `install.py` on each target machine.
+
 `qwen-tts 0.1.1` pins Transformers 4.57.3, which conflicts with current ComfyUI
 releases using Transformers 5.x. `install.py` therefore creates
 `ComfyUI-Qwen3-TTS/.venv` and installs the official Qwen runtime there. This
@@ -77,7 +89,8 @@ Voice Clone / TTS accepts a normal ComfyUI `LoadAudio` reference.
 
 ## Notes
 
-- CUDA with BF16 support is currently expected.
+- NVIDIA CUDA with BF16 support is currently expected. Linux and Windows are
+  supported; CPU and non-CUDA Windows builds are not currently supported.
 - FlashAttention 2 is used when already available; otherwise the node uses SDPA.
 - Long text is rejected by a conservative duration guard and should be split
   into narration segments.
