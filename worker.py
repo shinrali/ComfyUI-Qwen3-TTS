@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,17 @@ import torch
 from qwen_tts import Qwen3TTSModel
 
 from quality import speech_token_limit, validate_speech
+
+
+def write_status(path: Path, stage: str) -> None:
+    """Atomically publish the worker's current inference phase."""
+
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps({"stage": stage, "updated_at": time.time()}),
+        encoding="utf-8",
+    )
+    temporary.replace(path)
 
 
 def load_model(kind: str, cache_dir: Path) -> Any:
@@ -43,7 +55,7 @@ def load_model(kind: str, cache_dir: Path) -> Any:
     )
 
 
-def run(request_path: Path, response_path: Path, output_dir: Path) -> None:
+def run(request_path: Path, response_path: Path, output_dir: Path, status_path: Path) -> None:
     request = json.loads(request_path.read_text(encoding="utf-8"))
     kind = str(request.get("operation") or "")
     text = str(request.get("text") or "").strip()
@@ -53,12 +65,14 @@ def run(request_path: Path, response_path: Path, output_dir: Path) -> None:
     seed = int(request.get("seed") or 0)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    write_status(status_path, "loading_model")
     model = load_model(kind, Path(request["model_cache"]))
     if kind == "design":
         instruct = str(request.get("instruct") or "").strip()
         count = max(1, min(5, int(request.get("candidate_count") or 1)))
         if not instruct:
             raise ValueError("instruct is required")
+        write_status(status_path, "generating")
         if count == 1:
             wavs, sample_rate = model.generate_voice_design(
                 text=text, language=language, instruct=instruct
@@ -71,16 +85,20 @@ def run(request_path: Path, response_path: Path, output_dir: Path) -> None:
             )
     else:
         reference = Path(request["reference_path"])
+        write_status(status_path, "preparing_reference")
         prompt = model.create_voice_clone_prompt(
             ref_audio=str(reference), x_vector_only_mode=True
         )
+        write_status(status_path, "generating")
         wavs, sample_rate = model.generate_voice_clone(
             text=text,
             language=language,
             voice_clone_prompt=prompt,
             max_new_tokens=speech_token_limit(text),
         )
+    write_status(status_path, "validating")
     validated = validate_speech(list(wavs), int(sample_rate), text)
+    write_status(status_path, "saving")
     output_dir.mkdir(parents=True, exist_ok=True)
     files = []
     for index, wav in enumerate(validated, 1):
@@ -98,5 +116,6 @@ if __name__ == "__main__":
     parser.add_argument("--request", required=True, type=Path)
     parser.add_argument("--response", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--status", required=True, type=Path)
     args = parser.parse_args()
-    run(args.request, args.response, args.output_dir)
+    run(args.request, args.response, args.output_dir, args.status)

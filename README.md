@@ -34,6 +34,12 @@ packages instead of installing a second GPU stack. The nodes still execute
 synchronously inside ComfyUI's normal prompt queue, while ComfyUI's own Python
 packages remain unchanged.
 
+While a prompt is running, the nodes publish standard ComfyUI progress events
+for queueing, model loading, reference preparation, generation, validation, and
+output saving. Generation advances from 35% to 92% using a conservative runtime
+estimate; it is an ETA-based progress indication, not a token-level callback
+from Qwen3-TTS.
+
 ## Models
 
 Download both official model repositories into a Hugging Face cache rooted at:

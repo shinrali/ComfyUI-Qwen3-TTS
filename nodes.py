@@ -14,6 +14,8 @@ from typing import Any
 
 import folder_paths
 
+from .progress import estimate_generation_seconds, stage_percent
+
 
 LANGUAGES = [
     "Auto", "Chinese", "English", "Japanese", "Korean", "German",
@@ -33,6 +35,7 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
     run_root = Path(folder_paths.get_temp_directory()).resolve() / "qwen3-tts" / uuid.uuid4().hex
     run_root.mkdir(parents=True, exist_ok=False)
     request_path, response_path = run_root / "request.json", run_root / "response.json"
+    status_path = run_root / "status.json"
     log_path, output_dir = run_root / "worker.log", run_root / "outputs"
     request_path.write_text(
         json.dumps({**request, "model_cache": str(model_cache)}, ensure_ascii=False),
@@ -41,12 +44,42 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
     command = [
         str(python), str(ROOT / "worker.py"), "--request", str(request_path),
         "--response", str(response_path), "--output-dir", str(output_dir),
+        "--status", str(status_path),
     ]
+    from comfy.utils import ProgressBar
+
+    progress = ProgressBar(100)
+    progress.update_absolute(stage_percent("queued"), 100)
+    estimate = estimate_generation_seconds(
+        str(request.get("operation") or ""),
+        text_length=len(str(request.get("text") or "")),
+        candidate_count=int(request.get("candidate_count") or 1),
+    )
+    current_stage = "waiting_for_worker"
+    stage_started_at = time.monotonic()
+    progress.update_absolute(stage_percent(current_stage), 100)
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 1200
         try:
             while process.poll() is None:
+                if status_path.is_file():
+                    try:
+                        status = json.loads(status_path.read_text(encoding="utf-8"))
+                        next_stage = str(status.get("stage") or "").strip()
+                    except (OSError, ValueError, TypeError):
+                        next_stage = ""
+                    if next_stage and next_stage != current_stage:
+                        current_stage = next_stage
+                        stage_started_at = time.monotonic()
+                progress.update_absolute(
+                    stage_percent(
+                        current_stage,
+                        elapsed=time.monotonic() - stage_started_at,
+                        estimate=estimate,
+                    ),
+                    100,
+                )
                 try:
                     import comfy.model_management as model_management
                     model_management.throw_exception_if_processing_interrupted()
@@ -66,6 +99,7 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
         output = log_path.read_text(encoding="utf-8", errors="replace")
         shutil.rmtree(run_root, ignore_errors=True)
         raise RuntimeError(f"Qwen3-TTS failed: {output[-4000:]}")
+    progress.update_absolute(stage_percent("complete"), 100)
     result = json.loads(response_path.read_text(encoding="utf-8"))
     files = [Path(value).resolve() for value in result.get("files", [])]
     if not files or any(not path.is_file() or run_root not in path.parents for path in files):
