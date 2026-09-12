@@ -1,0 +1,7 @@
+transformers==4.57.3
+accelerate==1.12.0
+librosa
+soundfile==0.13.1
+sox
+onnxruntime
+einops

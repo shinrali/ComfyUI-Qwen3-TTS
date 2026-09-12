@@ -1,0 +1,2 @@
+# Runtime dependencies are isolated by install.py because qwen-tts 0.1.1 pins
+# transformers 4.57.3 while current ComfyUI uses Transformers 5.x.

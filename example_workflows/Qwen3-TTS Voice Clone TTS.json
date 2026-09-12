@@ -1,0 +1,71 @@
+{
+  "id": "1a903b52-cf90-44ae-824d-e82907ba3a8d",
+  "revision": 0,
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadAudio",
+      "pos": [60, 300],
+      "size": [400, 160],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {"name": "audio", "type": "COMBO", "widget": {"name": "audio"}, "link": null},
+        {"name": "audioUI", "type": "AUDIO_UI", "widget": {"name": "audioUI"}, "link": null},
+        {"name": "upload", "type": "AUDIOUPLOAD", "widget": {"name": "upload"}, "link": null}
+      ],
+      "outputs": [{"name": "AUDIO", "type": "AUDIO", "links": [1]}],
+      "properties": {"Node name for S&R": "LoadAudio", "cnr_id": "comfy-core"},
+      "widgets_values": ["reference.wav", null, null]
+    },
+    {
+      "id": 2,
+      "type": "Qwen3TTSVoiceClone",
+      "pos": [540, 100],
+      "size": [440, 320],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {"name": "text", "type": "STRING", "widget": {"name": "text"}, "link": null},
+        {"name": "language", "type": "COMBO", "widget": {"name": "language"}, "link": null},
+        {"name": "seed", "type": "INT", "widget": {"name": "seed"}, "link": null},
+        {"name": "reference_audio", "type": "AUDIO", "link": 1}
+      ],
+      "outputs": [
+        {"name": "audio_batch", "type": "QWEN3_TTS_AUDIO_BATCH", "links": [2]}
+      ],
+      "properties": {"Node name for S&R": "Qwen3TTSVoiceClone"},
+      "widgets_values": ["Welcome to Qwen3-TTS in ComfyUI.", "English", 0]
+    },
+    {
+      "id": 3,
+      "type": "SaveQwen3TTSAudio",
+      "pos": [1060, 170],
+      "size": [360, 180],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {"name": "audio_batch", "type": "QWEN3_TTS_AUDIO_BATCH", "link": 2},
+        {"name": "filename_prefix", "type": "STRING", "widget": {"name": "filename_prefix"}, "link": null},
+        {"name": "number_candidates", "type": "BOOLEAN", "widget": {"name": "number_candidates"}, "link": null}
+      ],
+      "outputs": [],
+      "properties": {"Node name for S&R": "SaveQwen3TTSAudio"},
+      "widgets_values": ["qwen3_tts/voice-clone", false]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 3, "AUDIO"],
+    [2, 2, 0, 3, 0, "QWEN3_TTS_AUDIO_BATCH"]
+  ],
+  "groups": [],
+  "definitions": {"subgraphs": []},
+  "config": {},
+  "extra": {"frontendVersion": "1.43.18"},
+  "version": 0.4
+}
