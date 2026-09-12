@@ -26,14 +26,15 @@ git clone https://github.com/shinrali/ComfyUI-Qwen3-TTS.git
 python ComfyUI-Qwen3-TTS/install.py
 ```
 
-On Windows Portable, run the installer with ComfyUI's embedded Python:
+On Windows Portable, run the installer from the
+`ComfyUI_windows_portable` directory with ComfyUI's embedded Python:
 
 ```bat
-..\python_embeded\python.exe ComfyUI-Qwen3-TTS\install.py
+.\python_embeded\python.exe .\ComfyUI\custom_nodes\ComfyUI-Qwen3-TTS\install.py
 ```
 
-Run that command from the `ComfyUI\custom_nodes` directory. The installer uses
-`.venv\Scripts\python.exe` on Windows and `.venv/bin/python` on Linux/macOS.
+The installer uses `.venv\Scripts\python.exe` on Windows and
+`.venv/bin/python` on Linux/macOS.
 If the embedded Windows Python cannot create a standard venv, the installer can
 fall back to an existing `uv` executable. A `.venv` copied from another OS or
 CPU architecture must not be reused; run `install.py` on each target machine.
