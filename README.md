@@ -33,11 +33,35 @@ On Windows Portable, run the installer from the
 .\python_embeded\python.exe .\ComfyUI\custom_nodes\ComfyUI-Qwen3-TTS\install.py
 ```
 
+On **ComfyUI Desktop** there is no `python_embeded`. Run the installer with the
+same Python that ComfyUI itself uses to run workflows, so the isolated runtime
+reuses ComfyUI's CUDA build of Torch. The Desktop venv lives next to the
+install, and its exact path is shown on startup as `Python executable`:
+
+```powershell
+& "C:\Users\<you>\Documents\ComfyUI\.venv\Scripts\python.exe" `
+  .\ComfyUI-Qwen3-TTS\install.py
+```
+
+Do **not** run `install.py` with a separate system Python (for example a
+standalone `python install.py`). The installer reuses the Torch of whatever
+interpreter launches it, so a system Python builds a CPU-only runtime that
+cannot run Qwen3-TTS. `install.py` now checks this and stops with a clear error
+if the reused Torch has no CUDA. If you already built a wrong `.venv`, delete
+`ComfyUI-Qwen3-TTS\.venv` (the custom-node one, not ComfyUI's own) and re-run
+with the correct interpreter.
+
 The installer uses `.venv\Scripts\python.exe` on Windows and
 `.venv/bin/python` on Linux/macOS.
 If the embedded Windows Python cannot create a standard venv, the installer can
 fall back to an existing `uv` executable. A `.venv` copied from another OS or
 CPU architecture must not be reused; run `install.py` on each target machine.
+
+ComfyUI Desktop and some current builds no longer bundle Torchaudio, which
+`qwen-tts` imports at load time. When the reused environment has no Torchaudio,
+`install.py` installs a build that matches the reused Torch's exact version and
+CUDA suffix (for example `torchaudio==2.10.0+cu130` for `torch 2.10.0+cu130`),
+without pulling a second Torch or CUDA stack.
 
 `qwen-tts 0.1.1` pins Transformers 4.57.3, which conflicts with current ComfyUI
 releases using Transformers 5.x. `install.py` therefore creates

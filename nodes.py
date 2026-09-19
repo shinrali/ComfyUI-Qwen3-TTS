@@ -14,6 +14,7 @@ from typing import Any
 
 import folder_paths
 
+from .model_paths import MODEL_IDS, resolve_model_dir
 from .progress import estimate_generation_seconds, stage_percent
 from .runtime_paths import runtime_python
 
@@ -30,9 +31,13 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
     python = runtime_python(ROOT / ".venv")
     if not python.is_file():
         raise RuntimeError(f"Qwen3-TTS runtime is not installed. Run: python {ROOT / 'install.py'}")
-    model_cache = Path(folder_paths.models_dir).resolve() / "qwen-voice" / "huggingface"
-    if not model_cache.is_dir():
-        raise RuntimeError(f"Qwen3-TTS model cache was not found at {model_cache}")
+    model_root = Path(folder_paths.models_dir).resolve() / "qwen-voice"
+    if not any(resolve_model_dir(model_root, model_id) for model_id in MODEL_IDS.values()):
+        raise RuntimeError(
+            "No complete Qwen3-TTS model found under "
+            f"{model_root}. Run: python {ROOT / 'install.py'}"
+        )
+    model_cache = model_root / "huggingface"
     run_root = Path(folder_paths.get_temp_directory()).resolve() / "qwen3-tts" / uuid.uuid4().hex
     run_root.mkdir(parents=True, exist_ok=False)
     request_path, response_path = run_root / "request.json", run_root / "response.json"
