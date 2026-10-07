@@ -125,6 +125,9 @@ Voice Clone / TTS accepts a normal ComfyUI `LoadAudio` reference.
 
 ## Notes
 
+- Output prefixes support Chinese and other Unicode names, including spaces.
+  Relative subfolders are supported; traversal, absolute paths, control characters,
+  Windows-invalid characters and reserved device names are rejected.
 - NVIDIA CUDA with BF16 support is currently expected. Linux and Windows are
   supported; CPU and non-CUDA Windows builds are not currently supported.
 - FlashAttention 2 is used when already available; otherwise the node uses SDPA.

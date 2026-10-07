@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 import time
@@ -15,6 +14,7 @@ from typing import Any
 import folder_paths
 
 from .model_paths import MODEL_IDS, resolve_model_dir
+from .output_paths import output_prefix_parts
 from .progress import estimate_generation_seconds, stage_percent
 from .runtime_paths import runtime_python
 
@@ -23,7 +23,6 @@ LANGUAGES = [
     "Auto", "Chinese", "English", "Japanese", "Korean", "German",
     "French", "Russian", "Portuguese", "Spanish", "Italian",
 ]
-SAFE_NAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
 ROOT = Path(__file__).resolve().parent
 
 
@@ -200,9 +199,7 @@ class SaveQwen3TTSAudio:
     CATEGORY = "audio/Qwen3-TTS"
 
     def save(self, audio_batch: dict[str, Any], filename_prefix: str, number_candidates: bool):
-        parts = [part for part in filename_prefix.replace("\\", "/").split("/") if part]
-        if not parts or any(not SAFE_NAME.fullmatch(part) for part in parts):
-            raise ValueError("Invalid filename_prefix")
+        parts = output_prefix_parts(filename_prefix)
         files = list(audio_batch.get("files") or [])
         if len(files) > 1 and not number_candidates:
             raise ValueError("Multiple candidates require number_candidates=true")
