@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import time
 import uuid
 import wave
+from contextlib import ExitStack
+from itertools import count
 from pathlib import Path
 from typing import Any
 
@@ -185,12 +188,53 @@ class Qwen3TTSVoiceClone:
             shutil.rmtree(reference_root, ignore_errors=True)
 
 
+def _save_wavs(destination: Path, stem: str, files: list[Path], number_candidates: bool) -> list[Path]:
+    if not files:
+        return []
+
+    pattern = re.compile(rf"{re.escape(stem)}_([0-9]{{4,}})(?:_[0-9]{{2,}})?\.wav", re.IGNORECASE)
+    last_number = max(
+        (int(match[1]) for path in destination.iterdir() if (match := pattern.fullmatch(path.name))),
+        default=0,
+    )
+    suffixes = [f"_{index:02d}" for index in range(1, len(files) + 1)] if number_candidates else [""]
+    for number in count(last_number + 1):
+        created = {}
+        saved = False
+        try:
+            with ExitStack() as stack:
+                try:
+                    # Reserve every candidate before copying. The scan only suggests a number.
+                    for suffix in suffixes:
+                        path = destination / f"{stem}_{number:04d}{suffix}.wav"
+                        created[path] = stack.enter_context(path.open("xb"))
+                except FileExistsError:
+                    continue
+
+                for source, output in zip(files, created.values()):
+                    with Path(source).open("rb") as wav:
+                        shutil.copyfileobj(wav, output)
+            saved = True
+            return list(created)
+        finally:
+            if not saved:
+                for path in created:
+                    path.unlink(missing_ok=True)
+
+
 class SaveQwen3TTSAudio:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
             "audio_batch": ("QWEN3_TTS_AUDIO_BATCH",),
-            "filename_prefix": ("STRING", {"default": "qwen3_tts/audio"}),
+            "filename_prefix": ("STRING", {
+                "default": "qwen3_tts/audio",
+                "tooltip": (
+                    "Set the base filename, optionally with a relative subfolder. "
+                    "A sequence number is added automatically, e.g. narration_0001.wav. "
+                    "Enable number_candidates to add a candidate suffix, e.g. narration_0001_01.wav."
+                ),
+            }),
             "number_candidates": ("BOOLEAN", {"default": False}),
         }}
     RETURN_TYPES = ()
@@ -209,18 +253,14 @@ class SaveQwen3TTSAudio:
         if destination != output_root and output_root not in destination.parents:
             raise ValueError("Output path is outside the ComfyUI output directory")
         destination.mkdir(parents=True, exist_ok=True)
-        outputs = []
         try:
-            for index, source in enumerate(files, 1):
-                suffix = f"_{index:02d}" if number_candidates else ""
-                filename = f"{parts[-1]}{suffix}.wav"
-                target = destination / filename
-                temporary = destination / f".{filename}.{uuid.uuid4().hex}.tmp"
-                shutil.copyfile(source, temporary)
-                temporary.replace(target)
-                outputs.append({"filename": filename, "subfolder": subfolder.as_posix(), "type": "output"})
+            saved = _save_wavs(destination, parts[-1], files, number_candidates)
         finally:
             shutil.rmtree(Path(audio_batch["root"]), ignore_errors=True)
+        outputs = [
+            {"filename": path.name, "subfolder": subfolder.as_posix(), "type": "output"}
+            for path in saved
+        ]
         return {"ui": {"audio": outputs}, "result": ()}
 
 
